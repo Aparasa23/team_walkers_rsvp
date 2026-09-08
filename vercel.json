@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    { "src": "/api/config", "dest": "/api/config.js" },
+    { "src": "/api/submit", "dest": "/api/submit.js" },
+    { "src": "/(.*)", "dest": "/Index.html" }
+  ]
+}

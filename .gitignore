@@ -1,0 +1,4 @@
+node_modules/
+.vercel/
+scratch_*.html
+scratch_*.jpg
