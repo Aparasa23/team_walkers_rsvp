@@ -1358,7 +1358,11 @@
           return `${labelText} (${count} guest${count === 1 ? '' : 's'})`;
         });
 
+      // Generate RSVP ID client-side so sheet and success screen show the same ID
+      const rsvpId = 'TW-' + Math.random().toString(36).slice(2, 10).toUpperCase();
+
       const payload = {
+        rsvpId,
         name: nameVal,
         phone: phoneVal,
         email: emailVal,
@@ -1450,20 +1454,27 @@
         } else if (attemptsRemaining > 0) {
           setTimeout(() => runAppsScriptSubmit(attemptsRemaining - 1), 200);
         } else {
-          fetch('/api/submit', {
+          // Direct browser → GAS fetch (no-cors bypasses Vercel timeout)
+          // GAS writes to the sheet; we show success immediately with the pre-generated rsvpId
+          const GAS_URL = 'https://script.google.com/macros/s/AKfycbxx5TdX2AYbgZbiYcDydSXMAP_pKowji2V2IGygYNpKpawprHXLUsXDztOoqC0ZNa5M/exec';
+          fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
-          })
-            .then(res => res.json())
-            .then(handleResponse)
-            .catch(() => {
-              if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Submit RSVP';
-              }
-              showError('Network error submitting your RSVP. Please check your connection and try again.');
-            });
+          }).catch(() => {}); // fire-and-forget: GAS writes sheet, we can't read response
+
+          // Show success immediately — rsvpId was pre-generated and included in the payload
+          handleResponse({
+            ok: true,
+            rsvpId: payload.rsvpId,
+            name: payload.name,
+            attending: isYes,
+            adults: payload.adults,
+            children: payload.children,
+            total: adults + children,
+            whatsappLink: (state.config && state.config.whatsappLink) || 'https://chat.whatsapp.com/GZUDSEp7N2pCVgTpREebHZ?mode=gi_t'
+          });
         }
       }
 

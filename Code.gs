@@ -238,7 +238,7 @@ function submitRsvp(payload) {
     };
   }
 
-  const rsvpId = 'TW-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+  const rsvpId = (payload.rsvpId && String(payload.rsvpId).trim()) || ('TW-' + Utilities.getUuid().slice(0, 8).toUpperCase());
 
   try {
     const ss = getSpreadsheet_();
