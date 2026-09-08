@@ -1377,66 +1377,68 @@
         btn.textContent = 'Submitting…';
       }
 
+      function handleResponse(result) {
+        if (result && result.ok === false) {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Submit RSVP';
+          }
+          return showError(result.error || 'Submission failed. Please check your entries.');
+        }
+
+        document.getElementById('formWrap').style.display = 'none';
+        document.getElementById('successBox').style.display = 'block';
+
+        const msg = result.attending
+          ? `We look forward to celebrating with you, ${result.name}.`
+          : `Thank you for letting us know, ${result.name}.`;
+        document.getElementById('successMessage').textContent = msg;
+
+        const receipt = document.getElementById('receipt');
+        receipt.innerHTML = '';
+        const line1 = document.createElement('b');
+        line1.textContent = 'RSVP ID: ' + result.rsvpId;
+        receipt.appendChild(line1);
+
+        if (result.attending) {
+          const line2 = document.createElement('span');
+          line2.textContent = `${result.total} family guest${result.total === 1 ? '' : 's'} (${result.adults} adult${result.adults === 1 ? '' : 's'}, ${result.children} child${result.children === 1 ? '' : 'ren'})`;
+          receipt.appendChild(line2);
+
+          if (payload.availability && payload.availability.length > 0) {
+            const line3 = document.createElement('div');
+            line3.style.marginTop = '10px';
+            line3.style.fontSize = '13px';
+            line3.style.color = 'var(--muted)';
+            line3.innerHTML = '<b>Confirmed Dates & Daily Headcounts:</b><br>' + payload.availability.join('<br>');
+            receipt.appendChild(line3);
+          }
+        }
+
+        const waLink = (state.config && state.config.whatsappLink) || result.whatsappLink || 'https://chat.whatsapp.com/GZUDSEp7N2pCVgTpREebHZ?mode=gi_t';
+        if (waLink) {
+          const waWrap = document.getElementById('whatsappWrap');
+          const waBtn = document.getElementById('whatsappBtn');
+          const waTitle = document.getElementById('waTitle');
+          const waDesc = document.getElementById('waDesc');
+
+          if (waWrap && waBtn) {
+            waBtn.href = waLink;
+            waWrap.style.display = 'block';
+
+            if (waTitle) waTitle.textContent = 'Join Team Walkers WhatsApp Group';
+            if (waDesc) waDesc.textContent = 'Get event reminders, schedule updates, parking information, and important announcements for Team Walkers Ganesh Chaturthi 2026.';
+          }
+        }
+
+        const rsvpEl = document.getElementById('rsvp');
+        if (rsvpEl && rsvpEl.scrollIntoView) rsvpEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
       function runAppsScriptSubmit(attemptsRemaining) {
         if (typeof google !== 'undefined' && google.script && google.script.run) {
           google.script.run
-            .withSuccessHandler((result) => {
-              if (result && result.ok === false) {
-                if (btn) {
-                  btn.disabled = false;
-                  btn.textContent = 'Submit RSVP';
-                }
-                return showError(result.error || 'Submission failed. Please check your entries.');
-              }
-
-              document.getElementById('formWrap').style.display = 'none';
-              document.getElementById('successBox').style.display = 'block';
-
-              const msg = result.attending
-                ? `We look forward to celebrating with you, ${result.name}.`
-                : `Thank you for letting us know, ${result.name}.`;
-              document.getElementById('successMessage').textContent = msg;
-
-              const receipt = document.getElementById('receipt');
-              receipt.innerHTML = '';
-              const line1 = document.createElement('b');
-              line1.textContent = 'RSVP ID: ' + result.rsvpId;
-              receipt.appendChild(line1);
-
-              if (result.attending) {
-                const line2 = document.createElement('span');
-                line2.textContent = `${result.total} family guest${result.total === 1 ? '' : 's'} (${result.adults} adult${result.adults === 1 ? '' : 's'}, ${result.children} child${result.children === 1 ? '' : 'ren'})`;
-                receipt.appendChild(line2);
-
-                if (payload.availability && payload.availability.length > 0) {
-                  const line3 = document.createElement('div');
-                  line3.style.marginTop = '10px';
-                  line3.style.fontSize = '13px';
-                  line3.style.color = 'var(--muted)';
-                  line3.innerHTML = '<b>Confirmed Dates & Daily Headcounts:</b><br>' + payload.availability.join('<br>');
-                  receipt.appendChild(line3);
-                }
-              }
-
-              const waLink = (state.config && state.config.whatsappLink) || result.whatsappLink || 'https://chat.whatsapp.com/GZUDSEp7N2pCVgTpREebHZ?mode=gi_t';
-              if (waLink) {
-                const waWrap = document.getElementById('whatsappWrap');
-                const waBtn = document.getElementById('whatsappBtn');
-                const waTitle = document.getElementById('waTitle');
-                const waDesc = document.getElementById('waDesc');
-
-                if (waWrap && waBtn) {
-                  waBtn.href = waLink;
-                  waWrap.style.display = 'block';
-
-                  if (waTitle) waTitle.textContent = 'Join Team Walkers WhatsApp Group';
-                  if (waDesc) waDesc.textContent = 'Get event reminders, schedule updates, parking information, and important announcements for Team Walkers Ganesh Chaturthi 2026.';
-                }
-              }
-
-              const rsvpEl = document.getElementById('rsvp');
-              if (rsvpEl && rsvpEl.scrollIntoView) rsvpEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            })
+            .withSuccessHandler(handleResponse)
             .withFailureHandler((err) => {
               if (btn) {
                 btn.disabled = false;
@@ -1448,11 +1450,20 @@
         } else if (attemptsRemaining > 0) {
           setTimeout(() => runAppsScriptSubmit(attemptsRemaining - 1), 200);
         } else {
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Submit RSVP';
-          }
-          showError('Google Apps Script environment not detected. Please refresh the page.');
+          fetch('/api/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+            .then(res => res.json())
+            .then(handleResponse)
+            .catch(() => {
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Submit RSVP';
+              }
+              showError('Network error submitting your RSVP. Please check your connection and try again.');
+            });
         }
       }
 
