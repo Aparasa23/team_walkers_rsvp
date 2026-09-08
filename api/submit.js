@@ -1,6 +1,4 @@
-const https = require('https');
-
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -24,22 +22,22 @@ module.exports = (req, res) => {
 
   const rsvpId = 'TW-VERCEL-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-  // Background async forward to Google Apps Script Webhook to save to Google Sheet
-  const gasUrl = 'https://script.google.com/macros/s/AKfycbxuKtniNEjmH5eb1LiAcElhPxp_R5EnjI3m5xF8_gmfRKm-nh0-1tp8EWNGX1_a_Yk4/exec';
+  // Forward to Google Apps Script Webhook to save directly to Google Sheet
+  const gasUrl = 'https://script.google.com/macros/s/AKfycbxx5TdX2AYbgZbiYcDydSXMAP_pKowji2V2IGygYNpKpawprHXLUsXDztOoqC0ZNa5M/exec';
   try {
-    const postData = JSON.stringify(payload);
-    const options = {
+    const gasResponse = await fetch(gasUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
-    const reqGas = https.request(gasUrl, options, () => {});
-    reqGas.on('error', () => {});
-    reqGas.write(postData);
-    reqGas.end();
-  } catch (e) {}
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const gasData = await gasResponse.json();
+    if (gasData && gasData.rsvpId) {
+      return res.status(200).json(gasData);
+    }
+  } catch (e) {
+    console.warn('Google Sheet forward warning:', e);
+  }
 
   res.status(200).json({
     ok: true,
