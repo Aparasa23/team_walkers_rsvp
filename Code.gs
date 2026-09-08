@@ -9,7 +9,18 @@ const APP_CONFIG = {
   whatsappLink: 'https://chat.whatsapp.com/GZUDSEp7N2pCVgTpREebHZ?mode=gi_t'
 };
 
-function doGet() {
+function doGet(e) {
+  const page = e && e.parameter && e.parameter.page;
+  if (page === 'admin') {
+    try {
+      return HtmlService.createHtmlOutputFromFile('Dashboard')
+        .setTitle('Team Walkers Admin Dashboard')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    } catch(err) {
+      // fall through to main page if Dashboard.html not found
+    }
+  }
   try {
     return HtmlService.createHtmlOutputFromFile('Index')
       .setTitle(APP_CONFIG.eventName + ' RSVP')
@@ -214,6 +225,68 @@ function normalizeTime_(value, tz) {
   if (!value) return '';
   if (value instanceof Date) return Utilities.formatDate(value, tz, 'h:mm a');
   return String(value);
+}
+
+function getAdminData() {
+  const ss = getSpreadsheet_();
+  if (!ss) return { rows: [], summary: { total: 0, attending: 0, notAttending: 0, totalAdults: 0, totalChildren: 0, totalGuests: 0 }, dayMap: {} };
+
+  const sheet = ss.getSheetByName(APP_CONFIG.responsesSheet);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { rows: [], summary: { total: 0, attending: 0, notAttending: 0, totalAdults: 0, totalChildren: 0, totalGuests: 0 }, dayMap: {} };
+  }
+
+  const lastRow = sheet.getLastRow();
+  const raw = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+
+  const rows = raw.map(r => ({
+    timestamp: r[0] ? r[0].toString() : '',
+    rsvpId:    String(r[1] || ''),
+    name:      String(r[2] || ''),
+    phone:     String(r[3] || ''),
+    email:     String(r[4] || ''),
+    attending: String(r[5] || ''),
+    adults:    Number(r[6] || 0),
+    children:  Number(r[7] || 0),
+    total:     Number(r[8] || 0),
+    guestNames:   String(r[9] || ''),
+    availability: String(r[10] || ''),
+    dietary:   String(r[11] || ''),
+    comments:  String(r[12] || '')
+  }));
+
+  const attending = rows.filter(r => r.attending === 'Yes');
+
+  const summary = {
+    total:        rows.length,
+    attending:    attending.length,
+    notAttending: rows.filter(r => r.attending === 'No').length,
+    totalAdults:  attending.reduce((s, r) => s + r.adults, 0),
+    totalChildren:attending.reduce((s, r) => s + r.children, 0),
+    totalGuests:  attending.reduce((s, r) => s + r.total, 0)
+  };
+
+  // Build per-day map from availability strings like:
+  // "Mon • Sep 14 — Ganesh Chavithi Pooja (3 guests) | Tue • Sep 15 — Game Night (2 guests)"
+  const dayMap = {};
+  attending.forEach(r => {
+    if (!r.availability) return;
+    const segments = r.availability.split(' | ');
+    segments.forEach(seg => {
+      seg = seg.trim();
+      if (!seg) return;
+      // Extract guest count from "(N guests)" or "(1 guest)"
+      const countMatch = seg.match(/\((\d+)\s+guests?\)/i);
+      const guestCount = countMatch ? parseInt(countMatch[1]) : r.total;
+      // Use the full segment (without count) as the key
+      const dayKey = seg.replace(/\s*\(\d+\s+guests?\)/i, '').trim();
+      if (!dayMap[dayKey]) dayMap[dayKey] = { totalGuests: 0, families: [] };
+      dayMap[dayKey].totalGuests += guestCount;
+      dayMap[dayKey].families.push({ name: r.name, phone: r.phone, guests: guestCount, rsvpId: r.rsvpId });
+    });
+  });
+
+  return { rows, summary, dayMap };
 }
 
 function submitRsvp(payload) {

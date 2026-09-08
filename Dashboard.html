@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team Walkers Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2128;
+      --border: #30363d;
+      --teal: #00c9b1;
+      --teal-dim: rgba(0,201,177,0.12);
+      --gold: #f0a500;
+      --gold-dim: rgba(240,165,0,0.12);
+      --red: #f85149;
+      --green: #3fb950;
+      --blue: #58a6ff;
+      --muted: #8b949e;
+      --text: #e6edf3;
+      --text2: #c9d1d9;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .logo { font-size: 28px; }
+    .header-title { font-size: 18px; font-weight: 700; color: var(--teal); letter-spacing: -0.3px; }
+    .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .badge-admin {
+      background: var(--gold-dim);
+      color: var(--gold);
+      border: 1px solid rgba(240,165,0,0.3);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s ease;
+      text-decoration: none;
+    }
+    .btn-teal { background: var(--teal); color: #000; }
+    .btn-teal:hover { background: #00e5c9; transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--teal); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Main ── */
+    .main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
+
+    /* ── Loading / Error ── */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(248,81,73,0.1);
+      border: 1px solid rgba(248,81,73,0.3);
+      border-radius: var(--radius);
+      padding: 20px;
+      color: var(--red);
+      text-align: center;
+    }
+
+    /* ── Summary Cards ── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--teal); }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.teal::before { background: var(--teal); }
+    .stat-card.gold::before { background: var(--gold); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.red::before { background: var(--red); }
+    .stat-card.blue::before { background: var(--blue); }
+
+    .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 10px; }
+    .stat-value { font-size: 36px; font-weight: 800; line-height: 1; }
+    .stat-card.teal .stat-value { color: var(--teal); }
+    .stat-card.gold .stat-value { color: var(--gold); }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.red .stat-value { color: var(--red); }
+    .stat-card.blue .stat-value { color: var(--blue); }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* ── Day Cards ── */
+    .days-section { margin-bottom: 36px; }
+    .days-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+
+    .day-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .day-card:hover { border-color: var(--teal); box-shadow: 0 0 0 1px rgba(0,201,177,0.15); }
+
+    .day-header {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .day-header-left { flex: 1; }
+    .day-date { font-size: 11px; color: var(--teal); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .day-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .day-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .pill-guest { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(0,201,177,0.2); }
+    .pill-family { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(240,165,0,0.2); }
+
+    .day-chevron { color: var(--muted); font-size: 16px; transition: transform 0.2s; margin-left: 8px; flex-shrink: 0; }
+    .day-card.open .day-chevron { transform: rotate(180deg); }
+
+    .day-body { display: none; padding: 0; }
+    .day-card.open .day-body { display: block; }
+
+    .attendee-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .attendee-row:last-child { border-bottom: none; }
+    .attendee-row:hover { background: rgba(255,255,255,0.03); }
+    .attendee-info { flex: 1; min-width: 0; }
+    .attendee-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .attendee-phone { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .attendee-guest-count { font-size: 13px; font-weight: 700; color: var(--teal); flex-shrink: 0; }
+
+    .day-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ── Full Table ── */
+    .table-section { margin-bottom: 36px; }
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--surface2);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 11px 14px; color: var(--text2); vertical-align: top; }
+    tbody td.name-cell { font-weight: 600; color: var(--text); }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tag-yes { background: rgba(63,185,80,0.15); color: var(--green); }
+    .tag-no { background: rgba(248,81,73,0.15); color: var(--red); }
+
+    .rsvp-id { font-family: monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── Bar Chart ── */
+    .bar-section { margin-bottom: 36px; }
+    .bar-list { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 12px; }
+    .bar-label { font-size: 12px; color: var(--text2); width: 150px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar-track { flex: 1; height: 28px; background: var(--surface2); border-radius: 6px; overflow: hidden; position: relative; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--teal), #00a896); border-radius: 6px; display: flex; align-items: center; padding-left: 10px; transition: width 0.6s ease; min-width: 2px; }
+    .bar-num { font-size: 12px; font-weight: 700; color: #000; white-space: nowrap; }
+    .bar-num-outside { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 8px; flex-shrink: 0; }
+
+    /* ── Last updated ── */
+    .footer { text-align: center; font-size: 12px; color: var(--muted); margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .header { padding: 14px 16px; }
+      .main { padding: 20px 14px 40px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-value { font-size: 28px; }
+      .days-grid { grid-template-columns: 1fr; }
+      .bar-label { width: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">🐘</div>
+    <div>
+      <div class="header-title">Team Walkers Admin</div>
+      <div class="header-sub">Ganesh Chaturthi 2026 • RSVP Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-admin">🔒 Admin</span>
+    <button class="btn btn-ghost" id="refreshBtn" onclick="loadData()">⟳ Refresh</button>
+    <button class="btn btn-teal" id="exportBtn" onclick="exportCSV()" disabled>↓ Export CSV</button>
+  </div>
+</header>
+
+<main class="main" id="mainContent">
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <div>Loading RSVP data…</div>
+  </div>
+  <div id="dashboard" style="display:none"></div>
+</main>
+
+<script>
+  let allData = null;
+  let lastUpdated = null;
+
+  function loadData() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '⟳ Loading…';
+    document.getElementById('loadingScreen').style.display = 'flex';
+    document.getElementById('dashboard').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        allData = data;
+        lastUpdated = new Date();
+        render(data);
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '⟳ Refresh';
+        exportBtn.disabled = false;
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('loadingScreen').innerHTML =
+          '<div class="error-box">⚠️ Failed to load data: ' + (err && err.message ? err.message : 'Unknown error') + '<br><br><button class="btn btn-teal" onclick="loadData()">Try Again</button></div>';
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '⟳ Refresh';
+      })
+      .getAdminData();
+  }
+
+  function render(data) {
+    const { summary, dayMap, rows } = data;
+
+    // Sort dayMap keys by date string (they start with "Mon • Sep 14" etc.)
+    const dayKeys = Object.keys(dayMap || {}).sort((a, b) => {
+      const months = { Jan:1, Feb:2, Mar:3, Apr:4, May:5, Jun:6, Jul:7, Aug:8, Sep:9, Oct:10, Nov:11, Dec:12 };
+      const parseDay = s => {
+        const m = s.match(/([A-Z][a-z]+)\s+(\d+)/);
+        return m ? months[m[1]] * 100 + parseInt(m[2]) : 0;
+      };
+      return parseDay(a) - parseDay(b);
+    });
+
+    const maxGuests = Math.max(1, ...dayKeys.map(k => dayMap[k].totalGuests));
+
+    const html = `
+      <div class="section-title">📊 Summary</div>
+      <div class="summary-grid">
+        <div class="stat-card teal">
+          <div class="stat-label">Total RSVPs</div>
+          <div class="stat-value">${summary.total}</div>
+          <div class="stat-sub">families responded</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Attending</div>
+          <div class="stat-value">${summary.attending}</div>
+          <div class="stat-sub">families</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Not Attending</div>
+          <div class="stat-value">${summary.notAttending}</div>
+          <div class="stat-sub">families</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-label">Total Guests</div>
+          <div class="stat-value">${summary.totalGuests}</div>
+          <div class="stat-sub">${summary.totalAdults} adults • ${summary.totalChildren} children</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Avg Family Size</div>
+          <div class="stat-value">${summary.attending > 0 ? (summary.totalGuests / summary.attending).toFixed(1) : '—'}</div>
+          <div class="stat-sub">guests per family</div>
+        </div>
+      </div>
+
+      ${dayKeys.length > 0 ? `
+      <div class="bar-section">
+        <div class="section-title">📅 Guests Per Day</div>
+        <div class="bar-list">
+          ${dayKeys.map(k => {
+            const d = dayMap[k];
+            const pct = Math.round((d.totalGuests / maxGuests) * 100);
+            const shortLabel = k.split('—')[0].trim();
+            return `
+              <div class="bar-row">
+                <div class="bar-label" title="${k}">${shortLabel}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:${pct}%">
+                    ${pct > 20 ? `<span class="bar-num">${d.totalGuests} guests</span>` : ''}
+                  </div>
+                </div>
+                ${pct <= 20 ? `<span class="bar-num-outside">${d.totalGuests}</span>` : ''}
+                <span style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;text-align:right">${d.families.length} ${d.families.length === 1 ? 'family' : 'families'}</span>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="days-section">
+        <div class="section-title">👥 Who's Coming Each Day</div>
+        <div class="days-grid">
+          ${dayKeys.map((k, i) => {
+            const d = dayMap[k];
+            const parts = k.split('—');
+            const dateStr = parts[0].trim();
+            const eventStr = parts.slice(1).join('—').trim().replace(/\s*\(\d+\s+guests?\)/i, '');
+            return `
+              <div class="day-card ${i < 2 ? 'open' : ''}" id="day-card-${i}">
+                <div class="day-header" onclick="toggleDay(${i})">
+                  <div class="day-header-left">
+                    <div class="day-date">${dateStr}</div>
+                    <div class="day-title">${eventStr || dateStr}</div>
+                  </div>
+                  <div class="day-badges">
+                    <span class="pill pill-guest">👥 ${d.totalGuests}</span>
+                    <span class="pill pill-family">🏠 ${d.families.length}</span>
+                  </div>
+                  <div class="day-chevron">▾</div>
+                </div>
+                <div class="day-body">
+                  ${d.families.length === 0
+                    ? '<div class="day-empty">No attendees yet</div>'
+                    : d.families.sort((a, b) => a.name.localeCompare(b.name)).map(f => `
+                        <div class="attendee-row">
+                          <div class="attendee-info">
+                            <div class="attendee-name">${escHtml(f.name)}</div>
+                            <div class="attendee-phone">${f.phone ? '📞 ' + escHtml(f.phone) : '<span style="color:var(--border)">no phone</span>'}</div>
+                          </div>
+                          <div class="attendee-guest-count">${f.guests} ${f.guests === 1 ? 'guest' : 'guests'}</div>
+                        </div>`).join('')
+                  }
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+      ` : `<div style="color:var(--muted);text-align:center;padding:40px;border:1px dashed var(--border);border-radius:var(--radius);margin-bottom:36px">No event-day data yet. RSVPs with day selections will appear here.</div>`}
+
+      <div class="table-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
+          <div class="section-title" style="margin-bottom:0">📋 All RSVPs (${rows.length})</div>
+          <input type="text" id="searchInput" placeholder="🔍 Search by name or phone…" oninput="filterTable(this.value)"
+            style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:13px;width:220px;outline:none">
+        </div>
+        <div class="table-wrap">
+          <table id="rsvpTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>RSVP ID</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Adults</th>
+                <th>Children</th>
+                <th>Total</th>
+                <th>Guest Names</th>
+                <th>Dietary</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="rsvpTableBody">
+              ${rows.map((r, i) => `
+                <tr data-search="${escHtml((r.name + ' ' + r.phone).toLowerCase())}">
+                  <td style="color:var(--muted)">${i + 1}</td>
+                  <td><span class="rsvp-id">${escHtml(r.rsvpId || '—')}</span></td>
+                  <td class="name-cell">${escHtml(r.name || '—')}</td>
+                  <td>${r.phone ? escHtml(r.phone) : '<span style="color:var(--muted)">—</span>'}</td>
+                  <td><span class="tag ${r.attending === 'Yes' ? 'tag-yes' : 'tag-no'}">${r.attending === 'Yes' ? '✓ Yes' : '✗ No'}</span></td>
+                  <td>${r.adults || 0}</td>
+                  <td>${r.children || 0}</td>
+                  <td style="font-weight:700;color:var(--teal)">${r.total || 0}</td>
+                  <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.guestNames || '')}">${r.guestNames ? escHtml(r.guestNames) : '<span style="color:var(--muted)">—</span>'}</td>
+                  <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.dietary || '')}">${r.dietary ? escHtml(r.dietary) : '<span style="color:var(--muted)">—</span>'}</td>
+                  <td style="white-space:nowrap;color:var(--muted)">${r.timestamp ? formatDate(r.timestamp) : '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="footer">Last refreshed: ${new Date().toLocaleString()} • Team Walkers Admin Dashboard</div>
+    `;
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    const dash = document.getElementById('dashboard');
+    dash.innerHTML = html;
+    dash.style.display = 'block';
+  }
+
+  function toggleDay(i) {
+    const card = document.getElementById('day-card-' + i);
+    card.classList.toggle('open');
+  }
+
+  function filterTable(q) {
+    const rows = document.querySelectorAll('#rsvpTableBody tr');
+    const lq = q.toLowerCase().trim();
+    rows.forEach(r => {
+      r.style.display = (!lq || (r.dataset.search || '').includes(lq)) ? '' : 'none';
+    });
+  }
+
+  function formatDate(val) {
+    try {
+      const d = val instanceof Date ? val : new Date(val);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+             d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } catch(e) { return String(val); }
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function exportCSV() {
+    if (!allData || !allData.rows) return;
+    const headers = ['RSVP ID','Name','Phone','Email','Attending','Adults','Children','Total','Guest Names','Event Days','Dietary','Comments','Timestamp'];
+    const rows = allData.rows.map(r => [
+      r.rsvpId, r.name, r.phone, r.email, r.attending,
+      r.adults, r.children, r.total, r.guestNames,
+      r.availability, r.dietary, r.comments,
+      r.timestamp ? new Date(r.timestamp).toLocaleString() : ''
+    ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"'));
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'TeamWalkers_RSVP_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Auto-load on page open
+  loadData();
+</script>
+</body>
+</html>
