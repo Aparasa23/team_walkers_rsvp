@@ -983,74 +983,7 @@
       ]
     };
 
-    // Polyfill for google.script.run when running outside Google Apps Script (e.g. Vercel / Netlify / localhost)
-    if (typeof google === 'undefined' || !google.script || !google.script.run) {
-      window.google = window.google || {};
-      window.google.script = window.google.script || {};
 
-      function createRunner() {
-        let successHandler = null;
-        let failureHandler = null;
-
-        const runner = {
-          withSuccessHandler: function(fn) {
-            successHandler = fn;
-            return runner;
-          },
-          withFailureHandler: function(fn) {
-            failureHandler = fn;
-            return runner;
-          },
-          getPublicConfig: function() {
-            fetch('/api/config')
-              .then(res => res.json())
-              .then(data => { if (successHandler) successHandler(data); })
-              .catch(() => { if (successHandler) successHandler(initialFallbackConfig); });
-          },
-          submitRsvp: function(payload) {
-            fetch('/api/submit', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.ok && successHandler) {
-                successHandler(data);
-              } else if (!data.ok && failureHandler) {
-                failureHandler(new Error(data.error || 'Submission failed'));
-              }
-            })
-            .catch(() => {
-              const isYes = payload.attending === 'Yes';
-              const adults = isYes ? parseInt(payload.adults || 0, 10) : 0;
-              const children = isYes ? parseInt(payload.children || 0, 10) : 0;
-              const total = adults + children;
-              const rsvpId = 'TW-LOCAL-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-              const result = {
-                ok: true,
-                rsvpId: rsvpId,
-                name: payload.name,
-                attending: isYes,
-                adults: adults,
-                children: children,
-                total: total,
-                whatsappLink: 'https://chat.whatsapp.com/GZUDSEp7N2pCVgTpREebHZ?mode=gi_t'
-              };
-              if (successHandler) successHandler(result);
-            });
-          }
-        };
-        return runner;
-      }
-
-      Object.defineProperty(window.google.script, 'run', {
-        get: function() {
-          return createRunner();
-        },
-        configurable: true
-      });
-    }
 
     const state = { config: null };
 
